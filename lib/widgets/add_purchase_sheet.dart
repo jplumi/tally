@@ -151,20 +151,8 @@ class _AddPurchaseSheetState extends State<AddPurchaseSheet> {
                 ),
                 const SizedBox(height: 20),
                 TextFormField(
-                  controller: _descriptionController,
-                  autofocus: !_isEditing,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    labelText: 'Descrição',
-                    hintText: 'Ex: mercado, Uber, cinema',
-                  ),
-                  textInputAction: TextInputAction.next,
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Informe uma descrição' : null,
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
                   controller: _valueController,
+                  autofocus: !_isEditing,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
                   decoration: const InputDecoration(
@@ -178,6 +166,18 @@ class _AddPurchaseSheetState extends State<AddPurchaseSheet> {
                     if (value == null || value <= 0) return 'Informe um valor válido';
                     return null;
                   },
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _descriptionController,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    labelText: 'Descrição',
+                    hintText: 'Ex: mercado, Uber, cinema',
+                  ),
+                  textInputAction: TextInputAction.next,
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Informe uma descrição' : null,
                 ),
                 const SizedBox(height: 20),
                 Text('Forma de pagamento', style: theme.textTheme.labelLarge),
