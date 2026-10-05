@@ -5,11 +5,11 @@ import 'screens/home_screen.dart';
 import 'services/purchase_store.dart';
 
 void main() {
-  runApp(const FinanceApp());
+  runApp(const TallyApp());
 }
 
-class FinanceApp extends StatelessWidget {
-  const FinanceApp({super.key});
+class TallyApp extends StatelessWidget {
+  const TallyApp({super.key});
 
   // Deliberate palette: deep forest green reads as "money / growth" without
   // being the generic Material blue, paired with a warm neutral surface.
@@ -25,7 +25,7 @@ class FinanceApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => PurchaseStore()..load(),
       child: MaterialApp(
-        title: 'Minhas finanças',
+        title: 'Tally',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,

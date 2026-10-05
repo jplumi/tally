@@ -1,4 +1,4 @@
-package com.example.finance_app
+package br.com.jplumi.tally
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -1,4 +1,4 @@
-name: finance_app
+name: tally
 description: "A personal finance tracker for daily purchases in BRL."
 publish_to: 'none'
 version: 1.0.0+1

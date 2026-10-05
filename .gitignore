@@ -1,11 +1,102 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ / Android Studio
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code (uncomment if you don't want to share editor settings)
+# .vscode/
+
+# Flutter / Dart tooling
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
 .pub-cache/
 .pub/
-build/
-*.iml
-*.lock
-ios/Flutter/Flutter.podspec
+/build/
+/coverage/
+
+# Symbolication / obfuscation maps
+app.*.symbols
+app.*.map.json
+
+# Generated localization / code-gen output (uncomment if you use build_runner)
+# *.g.dart
+# *.freezed.dart
+
+# NOTE: pubspec.lock is intentionally NOT ignored. This is an app (not a
+# package), so the lockfile should be committed for reproducible builds.
+
+# Android
+/android/app/debug
+/android/app/profile
+/android/app/release
+android/.gradle/
+android/captures/
+android/gradlew
+android/gradlew.bat
 android/local.properties
+android/GeneratedPluginRegistrant.java
+android/.cxx/
+**/*.keystore
+**/*.jks
+key.properties
+
+# iOS / macOS
+**/ios/**/*.mode1v3
+**/ios/**/*.mode2v3
+**/ios/**/*.moved-aside
+**/ios/**/*.pbxuser
+**/ios/**/*.perspectivev3
+**/ios/**/*sync/
+**/ios/**/.sconsign.dblite
+**/ios/**/.tags*
+**/ios/**/.vagrant/
+**/ios/**/DerivedData/
+**/ios/**/Icon?
+**/ios/**/Pods/
+**/ios/**/.symlinks/
+**/ios/**/profile
+**/ios/**/xcuserdata
+**/ios/.generated/
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/ephemeral
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/macos/Flutter/ephemeral/
+**/macos/Pods/
+
+# Linux / Windows desktop
+**/linux/flutter/ephemeral/
+**/windows/flutter/ephemeral/
+
+# Web
+**/web/.dart_tool/
+
+# Environment / secrets
+.env
+.env.*
+*.pem

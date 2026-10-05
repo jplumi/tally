@@ -41,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Minhas finanças'),
+        title: const Text('Tally'),
         centerTitle: false,
       ),
       body: SafeArea(

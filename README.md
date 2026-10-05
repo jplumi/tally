@@ -1,4 +1,4 @@
-# Minhas Finanças
+# tally
 
 A focused personal finance tracker built in Flutter. Log a purchase in a few taps, then check how much you spent each month, broken down by category.
 
@@ -23,8 +23,6 @@ lib/
 ```
 
 ## Running it
-
-This package ships only the Dart source (`lib/`) and `pubspec.yaml` — it doesn't include the generated `android/`, `ios/`, `web/`, etc. platform folders, since those are large, mostly-boilerplate, and best generated fresh by your local Flutter SDK. To run:
 
 1. Make sure you have the [Flutter SDK](https://docs.flutter.dev/get-started/install) installed (`flutter --version` to check).
 2. Unzip this project, then from inside the folder run:
