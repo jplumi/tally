@@ -243,6 +243,7 @@ class _AddPurchaseSheetState extends State<AddPurchaseSheet> {
                       final selected = c == _category;
                       return ChoiceChip(
                         selected: selected,
+                        showCheckmark: false,
                         label: Text(c.label),
                         avatar: Icon(
                           c.icon,
