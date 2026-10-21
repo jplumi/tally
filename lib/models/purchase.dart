@@ -1,5 +1,4 @@
 import 'payment_type.dart';
-import 'purchase_category.dart';
 
 class Purchase {
   final String id;
@@ -9,7 +8,7 @@ class Purchase {
   /// is the full amount; divide by [installments] to get the monthly bite.
   final double value;
   final PaymentType paymentType;
-  final PurchaseCategory category;
+  final String categoryId;
   final DateTime date;
 
   /// Number of installments. Always 1 for debit purchases.
@@ -20,7 +19,7 @@ class Purchase {
     required this.description,
     required this.value,
     required this.paymentType,
-    required this.category,
+    required this.categoryId,
     required this.date,
     this.installments = 1,
   });
@@ -54,7 +53,7 @@ class Purchase {
     String? description,
     double? value,
     PaymentType? paymentType,
-    PurchaseCategory? category,
+    String? categoryId,
     DateTime? date,
     int? installments,
   }) {
@@ -63,7 +62,7 @@ class Purchase {
       description: description ?? this.description,
       value: value ?? this.value,
       paymentType: paymentType ?? this.paymentType,
-      category: category ?? this.category,
+      categoryId: categoryId ?? this.categoryId,
       date: date ?? this.date,
       installments: installments ?? this.installments,
     );
@@ -74,7 +73,7 @@ class Purchase {
         'description': description,
         'value': value,
         'paymentType': paymentType.storageValue,
-        'category': category.storageValue,
+        'category': categoryId,
         'date': date.toIso8601String(),
         'installments': installments,
       };
@@ -85,7 +84,7 @@ class Purchase {
       description: json['description'] as String,
       value: (json['value'] as num).toDouble(),
       paymentType: PaymentTypeLabel.fromStorage(json['paymentType'] as String),
-      category: PurchaseCategoryMeta.fromStorage(json['category'] as String),
+      categoryId: json['category'] as String? ?? 'fixedCosts',
       date: DateTime.parse(json['date'] as String),
       installments: (json['installments'] as num?)?.toInt() ?? 1,
     );

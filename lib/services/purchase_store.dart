@@ -1,43 +1,70 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' hide Category;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/category.dart';
 import '../models/payment_type.dart';
 import '../models/purchase.dart';
-import '../models/purchase_category.dart';
 
 class PurchaseStore extends ChangeNotifier {
-  static const _storageKey = 'purchases_v1';
+  static const _purchasesKey = 'purchases_v1';
+  static const _categoriesKey = 'categories_v1';
 
   List<Purchase> _purchases = [];
+  List<Category> _categories = [];
   bool _isLoaded = false;
 
   List<Purchase> get purchases => List.unmodifiable(_purchases);
+  List<Category> get categories => List.unmodifiable(_categories);
   bool get isLoaded => _isLoaded;
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_storageKey);
-    if (raw != null && raw.isNotEmpty) {
-      final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
+
+    final rawPurchases = prefs.getString(_purchasesKey);
+    if (rawPurchases != null && rawPurchases.isNotEmpty) {
+      final List<dynamic> decoded = jsonDecode(rawPurchases) as List<dynamic>;
       _purchases = decoded
           .map((e) => Purchase.fromJson(e as Map<String, dynamic>))
           .toList();
-      _sort();
+      _sortPurchases();
     }
+
+    final rawCategories = prefs.getString(_categoriesKey);
+    if (rawCategories != null && rawCategories.isNotEmpty) {
+      final List<dynamic> decoded = jsonDecode(rawCategories) as List<dynamic>;
+      _categories = decoded
+          .map((e) => Category.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } else {
+      _categories = List.of(defaultCategories);
+      await _persistCategories();
+    }
+
     _isLoaded = true;
     notifyListeners();
   }
 
   Future<void> _persist() async {
-    final prefs = await SharedPreferences.getInstance();
-    final encoded = jsonEncode(_purchases.map((p) => p.toJson()).toList());
-    await prefs.setString(_storageKey, encoded);
+    await _persistPurchases();
+    await _persistCategories();
   }
 
-  void _sort() {
+  Future<void> _persistPurchases() async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = jsonEncode(_purchases.map((p) => p.toJson()).toList());
+    await prefs.setString(_purchasesKey, encoded);
+  }
+
+  Future<void> _persistCategories() async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = jsonEncode(_categories.map((c) => c.toJson()).toList());
+    await prefs.setString(_categoriesKey, encoded);
+  }
+
+  void _sortPurchases() {
     _purchases.sort((a, b) => b.date.compareTo(a.date));
   }
 
@@ -50,7 +77,7 @@ class PurchaseStore extends ChangeNotifier {
     required String description,
     required double value,
     required PaymentType paymentType,
-    required PurchaseCategory category,
+    required String categoryId,
     required DateTime date,
     int installments = 1,
   }) async {
@@ -59,12 +86,12 @@ class PurchaseStore extends ChangeNotifier {
       description: description,
       value: value,
       paymentType: paymentType,
-      category: category,
+      categoryId: categoryId,
       date: date,
       installments: installments,
     );
     _purchases.add(purchase);
-    _sort();
+    _sortPurchases();
     notifyListeners();
     await _persist();
   }
@@ -73,7 +100,7 @@ class PurchaseStore extends ChangeNotifier {
     final index = _purchases.indexWhere((p) => p.id == updated.id);
     if (index == -1) return;
     _purchases[index] = updated;
-    _sort();
+    _sortPurchases();
     notifyListeners();
     await _persist();
   }
@@ -98,14 +125,85 @@ class PurchaseStore extends ChangeNotifier {
         .fold(0.0, (sum, p) => sum + p.installmentValue);
   }
 
-  /// Totals billed in [month], grouped by category.
-  Map<PurchaseCategory, double> totalsByCategoryForMonth(DateTime month) {
-    final totals = <PurchaseCategory, double>{
-      for (final c in PurchaseCategory.values) c: 0.0,
-    };
+  /// Per-category spend for [month], including zero-spent categories,
+  /// ordered alphabetically by category name.
+  List<CategorySummary> categorySummariesForMonth(DateTime month) {
+    final totals = <String, double>{};
     for (final p in purchasesForMonth(month)) {
-      totals[p.category] = (totals[p.category] ?? 0) + p.installmentValue;
+      totals[p.categoryId] = (totals[p.categoryId] ?? 0) + p.installmentValue;
     }
-    return totals;
+
+    final summaries = _categories
+        .map((c) => CategorySummary(category: c, spent: totals[c.id] ?? 0.0))
+        .toList();
+    summaries.sort(
+      (a, b) => a.category.name.toLowerCase().compareTo(
+            b.category.name.toLowerCase(),
+          ),
+    );
+    return summaries;
+  }
+
+  /// Resolves a category by [id], falling back to `fixedCosts` (or the first
+  /// available category) so the UI never receives `null`.
+  Category categoryById(String id) {
+    for (final c in _categories) {
+      if (c.id == id) return c;
+    }
+    for (final c in _categories) {
+      if (c.id == 'fixedCosts') return c;
+    }
+    return _categories.isNotEmpty ? _categories.first : defaultCategories.first;
+  }
+
+  int purchaseCountForCategory(String id) {
+    return _purchases.where((p) => p.categoryId == id).length;
+  }
+
+  bool isCategoryInUse(String id) {
+    return _purchases.any((p) => p.categoryId == id);
+  }
+
+  Future<void> addCategory({
+    required String name,
+    double? limit,
+    required int colorValue,
+    required int iconCodePoint,
+    String? iconFontFamily,
+  }) async {
+    final category = Category(
+      id: _generateId(),
+      name: name,
+      limit: limit,
+      colorValue: colorValue,
+      iconCodePoint: iconCodePoint,
+      iconFontFamily: iconFontFamily,
+      isDefault: false,
+    );
+    _categories.add(category);
+    notifyListeners();
+    await _persistCategories();
+  }
+
+  Future<void> updateCategory(Category updated) async {
+    final index = _categories.indexWhere((c) => c.id == updated.id);
+    if (index == -1) return;
+    _categories[index] = updated;
+    notifyListeners();
+    await _persistCategories();
+  }
+
+  /// Deletes a category only when it is not the `fixedCosts` fallback and has
+  /// no purchases referencing it. Returns `false` (and changes nothing) when
+  /// the deletion is refused.
+  Future<bool> deleteCategory(String id) async {
+    final index = _categories.indexWhere((c) => c.id == id);
+    if (index == -1) return false;
+    final category = _categories[index];
+    if (category.id == 'fixedCosts' || isCategoryInUse(id)) return false;
+    _categories.removeAt(index);
+    notifyListeners();
+    await _persistCategories();
+    return true;
   }
 }

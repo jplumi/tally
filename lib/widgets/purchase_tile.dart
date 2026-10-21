@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../models/category.dart';
 import '../models/payment_type.dart';
 import '../models/purchase.dart';
-import '../models/purchase_category.dart';
 import '../utils/currency_formatter.dart';
 import '../utils/date_utils.dart';
 
@@ -10,12 +10,14 @@ class PurchaseTile extends StatelessWidget {
   const PurchaseTile({
     super.key,
     required this.purchase,
+    required this.category,
     required this.month,
     required this.onTap,
     required this.onDismissed,
   });
 
   final Purchase purchase;
+  final Category category;
   final DateTime month;
   final VoidCallback onTap;
   final VoidCallback onDismissed;
@@ -23,7 +25,7 @@ class PurchaseTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = purchase.category.color;
+    final color = category.color;
 
     String subtitle = formatDayMonth(purchase.date);
     subtitle += ' · ${purchase.paymentType.label}';
@@ -56,7 +58,7 @@ class PurchaseTile extends StatelessWidget {
                   color: color.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(purchase.category.icon, color: color, size: 20),
+                child: Icon(category.icon, color: color, size: 20),
               ),
               const SizedBox(width: 14),
               Expanded(

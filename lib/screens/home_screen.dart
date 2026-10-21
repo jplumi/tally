@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'categories_screen.dart';
 import '../services/purchase_store.dart';
 import '../utils/currency_formatter.dart';
 import '../widgets/add_purchase_sheet.dart';
@@ -37,12 +38,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final monthPurchases = store.purchasesForMonth(_selectedMonth);
     final total = store.totalForMonth(_selectedMonth);
-    final totalsByCategory = store.totalsByCategoryForMonth(_selectedMonth);
+    final categorySummaries = store.categorySummariesForMonth(_selectedMonth);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tally'),
         centerTitle: false,
+        actions: [
+          IconButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const CategoriesScreen()),
+            ),
+            icon: const Icon(Icons.tune_rounded),
+            tooltip: 'Categorias',
+          ),
+        ],
       ),
       body: SafeArea(
         child: CustomScrollView(
@@ -58,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 12),
                   _TotalCard(total: total),
                   const SizedBox(height: 16),
-                  CategorySummaryRow(totals: totalsByCategory),
+                  CategorySummaryRow(summaries: categorySummaries),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
                     child: Row(
@@ -100,6 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     final purchase = monthPurchases[index ~/ 2];
                     return PurchaseTile(
                       purchase: purchase,
+                      category: store.categoryById(purchase.categoryId),
                       month: _selectedMonth,
                       onTap: () => AddPurchaseSheet.show(context, existing: purchase),
                       onDismissed: () => store.deletePurchase(purchase.id),
