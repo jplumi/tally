@@ -6,9 +6,14 @@ import '../services/purchase_store.dart';
 import '../utils/currency_formatter.dart';
 import '../widgets/category_editor_sheet.dart';
 
-class CategoriesScreen extends StatelessWidget {
+class CategoriesScreen extends StatefulWidget {
   const CategoriesScreen({super.key});
 
+  @override
+  State<CategoriesScreen> createState() => _CategoriesScreenState();
+}
+
+class _CategoriesScreenState extends State<CategoriesScreen> {
   Future<void> _handleDelete(BuildContext context, Category category) async {
     final store = context.read<PurchaseStore>();
 
@@ -41,6 +46,10 @@ class CategoriesScreen extends StatelessWidget {
     await store.deleteCategory(category.id);
   }
 
+  void _onReorder(int oldIndex, int newIndex) {
+    context.read<PurchaseStore>().reorderCategory(oldIndex, newIndex);
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = context.watch<PurchaseStore>();
@@ -54,47 +63,60 @@ class CategoriesScreen extends StatelessWidget {
       body: SafeArea(
         child: store.categories.isEmpty
             ? const Center(child: Text('Nenhuma categoria cadastrada.'))
-            : ListView.separated(
+            : ReorderableListView.builder(
                 padding: const EdgeInsets.symmetric(vertical: 8),
+                buildDefaultDragHandles: false,
                 itemCount: store.categories.length,
-                separatorBuilder: (_, __) => Divider(
-                  height: 1,
-                  indent: 72,
-                  endIndent: 20,
-                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
-                ),
+                onReorderItem: _onReorder,
                 itemBuilder: (context, index) {
                   final category = store.categories[index];
-                  return ListTile(
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                    leading: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: category.color.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(category.icon,
-                          color: category.color, size: 20),
-                    ),
-                    title: Text(category.name),
-                    subtitle: Text(
-                      category.hasLimit
-                          ? 'Limite: ${formatBRL(category.limit!)}'
-                          : 'Sem limite',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    trailing: IconButton(
-                      onPressed: () => _handleDelete(context, category),
-                      icon: const Icon(Icons.delete_outline_rounded),
-                      tooltip: 'Excluir categoria',
-                    ),
-                    onTap: () => CategoryEditorSheet.show(
-                      context,
-                      existing: category,
+                  return ReorderableDelayedDragStartListener(
+                    key: ValueKey(category.id),
+                    index: index,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 4),
+                          leading: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: category.color.withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(category.icon,
+                                color: category.color, size: 20),
+                          ),
+                          title: Text(category.name),
+                          subtitle: Text(
+                            category.hasLimit
+                                ? 'Limite: ${formatBRL(category.limit!)}'
+                                : 'Sem limite',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          trailing: IconButton(
+                            onPressed: () => _handleDelete(context, category),
+                            icon: const Icon(Icons.delete_outline_rounded),
+                            tooltip: 'Excluir categoria',
+                          ),
+                          onTap: () => CategoryEditorSheet.show(
+                            context,
+                            existing: category,
+                          ),
+                        ),
+                        if (index < store.categories.length - 1)
+                          Divider(
+                            height: 1,
+                            indent: 72,
+                            endIndent: 20,
+                            color: theme.colorScheme.outlineVariant
+                                .withValues(alpha: 0.4),
+                          ),
+                      ],
                     ),
                   );
                 },

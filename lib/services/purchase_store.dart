@@ -150,22 +150,16 @@ class PurchaseStore extends ChangeNotifier {
   }
 
   /// Per-category spend for [month], including zero-spent categories,
-  /// ordered alphabetically by category name.
+  /// ordered by the user's category order.
   List<CategorySummary> categorySummariesForMonth(DateTime month) {
     final totals = <String, double>{};
     for (final p in purchasesForMonth(month)) {
       totals[p.categoryId] = (totals[p.categoryId] ?? 0) + p.installmentValue;
     }
 
-    final summaries = _categories
+    return _categories
         .map((c) => CategorySummary(category: c, spent: totals[c.id] ?? 0.0))
         .toList();
-    summaries.sort(
-      (a, b) => a.category.name.toLowerCase().compareTo(
-            b.category.name.toLowerCase(),
-          ),
-    );
-    return summaries;
   }
 
   /// Resolves a category by [id], falling back to `fixedCosts` (or the first
@@ -205,6 +199,16 @@ class PurchaseStore extends ChangeNotifier {
       isDefault: false,
     );
     _categories.add(category);
+    notifyListeners();
+    await _persistCategories();
+  }
+
+  Future<void> reorderCategory(int oldIndex, int newIndex) async {
+    if (oldIndex == newIndex) return;
+    if (oldIndex < 0 || oldIndex >= _categories.length) return;
+    if (newIndex < 0 || newIndex >= _categories.length) return;
+    final category = _categories.removeAt(oldIndex);
+    _categories.insert(newIndex, category);
     notifyListeners();
     await _persistCategories();
   }

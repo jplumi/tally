@@ -105,6 +105,46 @@ void main() {
     expect(store.categories.any((c) => c.id == 'investments'), false);
   });
 
+  test('reorderCategory moves a category and persists the new order',
+      () async {
+    final store = await loadStore();
+
+    expect(store.categories.first.id, 'fixedCosts');
+
+    await store.reorderCategory(3, 0);
+    expect(store.categories.first.id, 'dining');
+    expect(store.categories[1].id, 'fixedCosts');
+
+    final reloaded = await loadStore();
+    expect(reloaded.categories.map((c) => c.id).toList(), [
+      'dining',
+      'fixedCosts',
+      'entertainment',
+      'investments',
+    ]);
+  });
+
+  test('categorySummariesForMonth follows the category order', () async {
+    final store = await loadStore();
+
+    await store.addPurchase(
+      description: 'Jantar',
+      value: 50,
+      paymentType: PaymentType.debit,
+      categoryId: 'dining',
+      date: DateTime(2025, 1, 10),
+    );
+
+    await store.reorderCategory(3, 0);
+
+    final summaries = store.categorySummariesForMonth(DateTime(2025, 1));
+    expect(
+      summaries.map((s) => s.category.id).toList(),
+      store.categories.map((c) => c.id).toList(),
+    );
+    expect(summaries.first.category.id, 'dining');
+  });
+
   test('monthly limit defaults to unset', () async {
     final store = await loadStore();
 
