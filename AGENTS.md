@@ -9,6 +9,10 @@ purchases and see how much they spent each month, broken down by category.
 Everything is stored locally on-device — there is no account, server, or
 network requirement.
 
+Categories are **user-editable data**, not a fixed enum. The app ships with
+four default categories (seeded on first run) and the user can add, edit,
+reorder, and delete categories from the Categories screen.
+
 The UI is entirely in **Brazilian Portuguese (pt-BR)**, and the domain
 (currency, dates, payment types, categories) is BRL/Brazil-specific. Keep user
 facing strings in pt-BR.
@@ -17,11 +21,13 @@ facing strings in pt-BR.
 
 - **Flutter** (Dart SDK `>=3.0.0 <4.0.0`), Material 3 (`useMaterial3: true`)
 - **State management:** `provider` (`ChangeNotifier`-based)
-- **Persistence:** `shared_preferences` (single JSON blob)
+- **Persistence:** `shared_preferences` (three keys: two JSON lists + one double)
 - **Formatting:** `intl` (BRL currency and pt-BR date handling)
 - **Lints:** `flutter_lints` with `prefer_const_constructors` and
   `prefer_const_literals_to_create_immutables` enabled in
   `analysis_options.yaml`
+
+There is no code generation step (`build_runner` is not configured).
 
 ## Commands
 
@@ -33,8 +39,6 @@ flutter run              # run on a device/emulator
 flutter run -d chrome    # run in a browser
 ```
 
-There is no code generation step (build_runner is not configured).
-
 ## Architecture and conventions
 
 - **State management:** `PurchaseStore` is the single source of truth. It is
@@ -42,25 +46,45 @@ There is no code generation step (build_runner is not configured).
   `context.watch<PurchaseStore>()` (reactive) or `context.read<PurchaseStore>()`
   (in callbacks/actions). Do not introduce a second store without a clear
   reason.
-- **Data flow:** screens and widgets read derived data (e.g.
-  `purchasesForMonth`, `totalForMonth`, `totalsByCategoryForMonth`) from the
-  store; mutations go through `addPurchase` / `updatePurchase` / `deletePurchase`.
-  Mutations call `notifyListeners()` first, then `await _persist()`.
-- **Models:** enums use Dart extension methods (`PaymentTypeLabel`,
-  `PurchaseCategoryMeta`) for labels, icons, colors, and storage mapping rather
-  than switch statements spread across the UI. Follow this pattern for new
-  enum metadata.
-- **Storage:** all purchases serialize to JSON and persist under the
-  `shared_preferences` key `purchases_v1`. Enum values are stored by their Dart
-  `name` (`storageValue`) and decoded via `fromStorage`, which falls back to
-  `debit` / `fixedCosts` on unknown values. Keep this backward-compatible
-  approach when adding enum members.
+- **Data flow:** screens and widgets read derived data from the store
+  (`purchasesForMonth`, `totalForMonth`, `categorySummariesForMonth`,
+  `categoryById`, `categories`, `monthlyLimit`). Mutations go through the
+  public methods — `addPurchase` / `updatePurchase` / `deletePurchase`,
+  `addCategory` / `updateCategory` / `reorderCategory` / `deleteCategory`, and
+  `setMonthlyLimit`. Mutations call `notifyListeners()` first, then `await` the
+  relevant `_persist*` method.
+- **Models:**
+  - `lib/models/payment_type.dart` — `PaymentType` enum (`debit`, `credit`)
+    with a `PaymentTypeLabel` extension for label, `storageValue`, and
+    `fromStorage` (falls back to `debit` on unknown values).
+  - `lib/models/category.dart` — `Category` is a user-editable class with a
+    stable `id` (referenced by persisted purchases), `name`, optional monthly
+    `limit` (`null`/`0` = no limit), ARGB `colorValue`, `iconCodePoint` +
+    `iconFontFamily`, and `isDefault`. Also defines `defaultCategories` and
+    `CategorySummary` (per-category monthly spend with a clamped progress
+    ratio).
+  - `lib/models/purchase.dart` — `Purchase` references a category by
+    `categoryId` (string), not an enum.
+- **Storage:** all persistence goes through `PurchaseStore` and
+  `shared_preferences`, under three keys:
+  - `purchases_v1` — JSON list of `Purchase`. `paymentType` is stored by its
+    Dart `name`; `categoryId` is serialized under the JSON key `category`;
+    `date` is ISO-8601. Decoding is tolerant (unknown payment type → `debit`,
+    missing category → `fixedCosts`, missing installments → `1`).
+  - `categories_v1` — JSON list of `Category`. First run seeds
+    `defaultCategories`. `Category.fromJson` is tolerant of missing fields
+    (generates an id, falls back to a default name/color/icon).
+  - `monthly_limit_v1` — a single `double`, removed when unset.
 - **UI strings:** pt-BR, with `R$` currency formatting via `formatBRL()` from
   `lib/utils/currency_formatter.dart`. Dates go through
-  `lib/utils/date_utils.dart`. Do not hard-code new BRL/date formatting inline.
-- **Colors:** category colors are deliberate, hand-picked hues defined in
-  `lib/models/purchase_category.dart`. The app theme seeds from `Color(0xFF1B4332)`
-  (deep forest green) in `main.dart`. Do not switch to default Material colors.
+  `lib/utils/date_utils.dart`. Currency inputs use `CurrencyInputFormatter`
+  from `lib/utils/currency_input_formatter.dart`. Do not hard-code new
+  BRL/date formatting inline.
+- **Colors & icons:** category choices are deliberate, hand-picked values in
+  `lib/utils/category_palette.dart` (`CategoryPalette.colors` and
+  `CategoryPalette.icons`; the first four of each are the legacy default
+  category colors/icons). The app theme seeds from `Color(0xFF1B4332)` (deep
+  forest green) in `main.dart`. Do not switch to default Material colors.
 - **Const correctness:** prefer `const` constructors and const literals — the
   linter enforces this.
 
@@ -72,46 +96,73 @@ This is the trickiest part of the app and must be preserved exactly.
   `purchase date + installments - 1`, each month billed at
   `value / installments`.
 - Debit purchases always have `installments = 1`. Installments only apply to
-  `PaymentType.credit` with `installments > 1`.
+  `PaymentType.credit` with `installments > 1` (`Purchase.isInstallment`).
 - Key logic lives in `Purchase`:
   - `installmentValue` = `value / installments`
-  - `startMonth` / `endMonth` = first/last affected month
+  - `startMonth` / `endMonth` = first/last affected month (inclusive)
   - `touchesMonth(month)` = whether a billed installment lands in that month
   - `installmentNumberForMonth(month)` = 1-based "n/m" label for the tile
 - Monthly aggregation in `PurchaseStore` (`purchasesForMonth`,
-  `totalForMonth`, `totalsByCategoryForMonth`) is built on top of these and
-  always sums `installmentValue`, not the full `value`.
+  `totalForMonth`, `categorySummariesForMonth`) is built on top of these and
+  always sums `installmentValue`, never the full `value`.
 
 ## Entry/edit sheet behavior
 
 `AddPurchaseSheet` serves both create and edit modes (via optional `existing`).
-Defaults: `PaymentType.debit`, `PurchaseCategory.fixedCosts`, today's date, and
+Defaults: `PaymentType.debit`, `categoryId = 'fixedCosts'`, today's date, and
 `installments = 1`. The installment count dropdown only appears for credit.
-Switching back to debit resets installments to 1. Value input uses
-`CurrencyInputFormatter` (digits-only, last two digits are cents).
+Switching back to debit resets installments to 1. Category is chosen from a
+`ChoiceChip` per category. Value input uses `CurrencyInputFormatter`
+(digits-only, last two digits are cents).
+
+## Category & monthly limit behavior
+
+- `deleteCategory` refuses to delete the `fixedCosts` fallback and any category
+  still referenced by a purchase; it returns `false` (and changes nothing) when
+  refused. `isCategoryInUse` / `purchaseCountForCategory` back the guard.
+- `categoryById` always resolves to a category (falls back to `fixedCosts`,
+  then the first category, then `defaultCategories.first`) so the UI never
+  gets `null`.
+- `setMonthlyLimit` normalizes non-positive values to `null` (unset). A
+  monthly limit and per-category limits are both optional and independent.
 
 ## Testing
 
-The only test file (`test/widget_test.dart`) is the **default Flutter template
-smoke test and is currently stale/broken**: it imports and pumps `MyApp`, which
-no longer exists (the widget is now `TallyApp`). If you touch tests, replace
-this with real tests rather than fixing the template. Prefer testing the domain
-logic in `Purchase` and `PurchaseStore` (installment math, monthly aggregation)
-over UI-only tests. Note `shared_preferences` has a test mock
-(`SharedPreferences.setMockInitialValues`) for store tests.
+Tests are real (not the stale Flutter template):
+
+- `test/models/category_test.dart` — `Category` JSON round-trip, `hasLimit`
+  semantics, default category ids, `copyWith(limit: null)`, `CategorySummary`
+  ratio/clamp/over-limit.
+- `test/services/purchase_store_test.dart` — uses
+  `SharedPreferences.setMockInitialValues`; covers first-run seeding, category
+  CRUD/reorder/delete guards, monthly-limit persistence, and installment
+  aggregation across months.
+- `test/widget_test.dart` — smoke test that pumps `TallyApp` and checks the
+  home screen renders.
+
+Prefer testing domain logic in `Purchase`, `Category`, and `PurchaseStore`
+(installment math, monthly aggregation, storage round-trips) over UI-only
+tests.
 
 ## Pitfalls
 
 - `Purchase.endMonth` uses month arithmetic (`date.month - 2 + installments`);
   be careful when refactoring — off-by-one errors here silently change which
   months an installment appears in.
-- `PurchaseStore.purchases` is unmodifiable; mutate only via the public
-  `addPurchase` / `updatePurchase` / `deletePurchase` methods so persistence
-  and sorting stay consistent.
-- Purchases are sorted by date descending in `_sort()`; keep that ordering.
-- `lib/utils/date_utils.dart` shadows Dart's own `DateTime` helpers — do not
-  `import 'dart:core'` `date_utils` confusion; it defines project-local
-  formatters only.
+- `PurchaseStore.purchases` and `.categories` are unmodifiable; mutate only via
+  the public methods so persistence and sorting stay consistent.
+- Purchases are sorted by date descending in `_sortPurchases()`; keep that
+  ordering. `purchasesForMonth` re-sorts the filtered list rather than relying
+  on `_purchases` order.
+- `Category.copyWith` uses a sentinel (`_unset`) so `limit: null` actually
+  clears the limit, distinct from "not provided". Preserve this when changing
+  `copyWith`.
+- `lib/utils/date_utils.dart` shadows Dart's own `DateTime` helpers; it defines
+  project-local formatters only — do not confuse it with `dart:core`.
+- The codebase targets a recent Flutter and uses `Color.withValues`,
+  `ColorScheme.surfaceContainerHigh` / `onSurfaceVariant`, and
+  `ReorderableDelayedDragStartListener`. Do not "clean up" these to deprecated
+  equivalents (`withOpacity`, `surface`, etc.).
 - Keep the `pubspec.lock` file committed (this is an app, not a package).
 
 `android/`, `build/`, and other generated/platform folders are generated output
