@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 
-/// Sentinel used by [Category.copyWith] to distinguish "limit not provided"
-/// from "limit explicitly set to null".
+/// Lets [Category.copyWith] tell "limit not provided" apart from
+/// "limit set to null".
 const Object _unset = Object();
 
-/// A spending category. Unlike the previous fixed enum, categories are
-/// user-editable data persisted on-device, so identity is a stable [id]
-/// rather than a Dart enum value.
+/// A user-editable spending category persisted on-device.
 class Category {
   const Category({
     required this.id,
@@ -18,34 +16,27 @@ class Category {
     required this.isDefault,
   });
 
-  /// Stable identity. Seeded defaults keep the legacy enum names
-  /// (`fixedCosts`, `entertainment`, `investments`, `dining`), which lets
-  /// existing purchase JSON migrate without a data pass.
+  /// Referenced by persisted purchases, so it must stay stable.
   final String id;
 
-  /// pt-BR display name.
   final String name;
 
   /// Monthly limit in BRL. `null` or `0` means "no limit".
   final double? limit;
 
-  /// ARGB color value, serialized as a primitive.
+  /// Stored as ARGB color value and `IconData.codePoint` primitives so the
+  /// whole category serializes to JSON.
   final int colorValue;
-
-  /// Material [IconData.codePoint], serialized as a primitive.
   final int iconCodePoint;
-
-  /// Material icon font family (usually `'MaterialIcons'`).
   final String? iconFontFamily;
 
-  /// Whether this is one of the seeded defaults vs. user-created.
   final bool isDefault;
 
   Color get color => Color(colorValue);
 
   IconData get icon {
-    // Reconstructed at runtime from persisted primitives, which intentionally
-    // opts this app out of const-only icon tree-shaking.
+    // Rebuilding IconData at runtime keeps icons from being tree-shaken,
+    // which is required because they come from persisted data.
     // ignore: non_const_argument_for_const_parameter
     return IconData(iconCodePoint, fontFamily: iconFontFamily);
   }
@@ -100,8 +91,7 @@ class Category {
   }
 }
 
-/// Seeded on first run. IDs match the legacy enum names so that existing
-/// purchases (which serialized `category: "dining"` etc.) resolve unchanged.
+/// Seeded on first run.
 final List<Category> defaultCategories = [
   Category(
     id: 'fixedCosts',
@@ -150,7 +140,7 @@ class CategorySummary {
 
   bool get hasLimit => category.hasLimit;
 
-  /// Spent-to-limit ratio, clamped to `[0, 1]` for progress rendering.
+  /// Clamped to `[0, 1]` so progress indicators never overflow.
   double get ratio =>
       hasLimit ? (spent / category.limit!).clamp(0.0, 1.0).toDouble() : 0.0;
 

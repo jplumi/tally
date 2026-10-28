@@ -35,36 +35,6 @@ flutter run -d chrome    # run in a browser
 
 There is no code generation step (build_runner is not configured).
 
-## Project structure
-
-```
-lib/
-  main.dart                    App entry point, theme, Provider setup
-  models/
-    purchase.dart              Purchase entity + installment math + (de)serialization
-    payment_type.dart          PaymentType enum (debit/credit) + labels/storage
-    purchase_category.dart     PurchaseCategory enum + label/icon/color/storage
-  services/
-    purchase_store.dart        PurchaseStore (ChangeNotifier): persistence + monthly aggregation
-  screens/
-    home_screen.dart           HomeScreen: monthly overview
-  widgets/
-    add_purchase_sheet.dart    Quick-entry/edit bottom sheet + currency input formatter
-    purchase_tile.dart         Single purchase row (edit/delete)
-    category_summary_row.dart  Per-category horizontal summary cards
-    month_selector.dart        Month navigation/switcher
-    empty_state.dart           Empty-month placeholder
-  utils/
-    currency_formatter.dart    formatBRL()
-    date_utils.dart            pt-BR date/month formatting helpers
-test/
-  widget_test.dart             (see "Testing" below)
-```
-
-`android/`, `build/`, and other generated/platform folders are generated output
-and should be ignored when reading or editing the project. Platform folders are
-regenerated with `flutter create .` if missing.
-
 ## Architecture and conventions
 
 - **State management:** `PurchaseStore` is the single source of truth. It is
@@ -143,3 +113,7 @@ over UI-only tests. Note `shared_preferences` has a test mock
   `import 'dart:core'` `date_utils` confusion; it defines project-local
   formatters only.
 - Keep the `pubspec.lock` file committed (this is an app, not a package).
+
+`android/`, `build/`, and other generated/platform folders are generated output
+and should be ignored when reading or editing the project. Platform folders are
+regenerated with `flutter create .` if missing.

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'categories_screen.dart';
+import 'settings_screen.dart';
 import '../services/purchase_store.dart';
 import '../utils/currency_formatter.dart';
 import '../widgets/add_purchase_sheet.dart';
@@ -47,10 +47,10 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const CategoriesScreen()),
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
             ),
-            icon: const Icon(Icons.tune_rounded),
-            tooltip: 'Categorias',
+            icon: const Icon(Icons.settings_rounded),
+            tooltip: 'Configurações',
           ),
         ],
       ),
@@ -66,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     onChanged: (m) => setState(() => _selectedMonth = m),
                   ),
                   const SizedBox(height: 12),
-                  _TotalCard(total: total),
+                  _TotalCard(total: total, monthlyLimit: store.monthlyLimit),
                   const SizedBox(height: 16),
                   CategorySummaryRow(summaries: categorySummaries),
                   Padding(
@@ -75,7 +75,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Text(
                           'Compras',
-                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                          style: theme.textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                         const Spacer(),
                         if (monthPurchases.isNotEmpty)
@@ -93,7 +94,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             if (monthPurchases.isEmpty)
               SliverToBoxAdapter(
-                child: EmptyState(onAddPressed: () => AddPurchaseSheet.show(context)),
+                child: EmptyState(
+                    onAddPressed: () => AddPurchaseSheet.show(context)),
               )
             else
               SliverList(
@@ -104,7 +106,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         height: 1,
                         indent: 20,
                         endIndent: 20,
-                        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                        color: theme.colorScheme.outlineVariant
+                            .withValues(alpha: 0.4),
                       );
                     }
                     final purchase = monthPurchases[index ~/ 2];
@@ -112,7 +115,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       purchase: purchase,
                       category: store.categoryById(purchase.categoryId),
                       month: _selectedMonth,
-                      onTap: () => AddPurchaseSheet.show(context, existing: purchase),
+                      onTap: () =>
+                          AddPurchaseSheet.show(context, existing: purchase),
                       onDismissed: () => store.deletePurchase(purchase.id),
                     );
                   },
@@ -133,13 +137,19 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _TotalCard extends StatelessWidget {
-  const _TotalCard({required this.total});
+  const _TotalCard({required this.total, this.monthlyLimit});
 
   final double total;
+  final double? monthlyLimit;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final hasLimit = monthlyLimit != null && monthlyLimit! > 0;
+    final ratio =
+        hasLimit ? (total / monthlyLimit!).clamp(0.0, 1.0).toDouble() : 0.0;
+    final isOverLimit = hasLimit && total > monthlyLimit!;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
@@ -174,6 +184,30 @@ class _TotalCard extends StatelessWidget {
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
+            if (hasLimit) ...[
+              const SizedBox(height: 4),
+              Text(
+                'de ${formatBRL(monthlyLimit!)}',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onPrimary.withValues(alpha: 0.85),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: ratio,
+                  minHeight: 4,
+                  backgroundColor:
+                      theme.colorScheme.onPrimary.withValues(alpha: 0.18),
+                  valueColor: AlwaysStoppedAnimation(
+                    isOverLimit
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.onPrimary,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

@@ -105,6 +105,40 @@ void main() {
     expect(store.categories.any((c) => c.id == 'investments'), false);
   });
 
+  test('monthly limit defaults to unset', () async {
+    final store = await loadStore();
+
+    expect(store.monthlyLimit, isNull);
+    expect(store.hasMonthlyLimit, false);
+  });
+
+  test('monthly limit persists across loads', () async {
+    final store = await loadStore();
+
+    await store.setMonthlyLimit(1200);
+    expect(store.monthlyLimit, 1200);
+    expect(store.hasMonthlyLimit, true);
+
+    final reloaded = await loadStore();
+    expect(reloaded.monthlyLimit, 1200);
+    expect(reloaded.hasMonthlyLimit, true);
+  });
+
+  test('monthly limit is cleared with null or non-positive values', () async {
+    final store = await loadStore();
+
+    await store.setMonthlyLimit(1200);
+    await store.setMonthlyLimit(null);
+    expect(store.monthlyLimit, isNull);
+    expect(store.hasMonthlyLimit, false);
+    expect((await loadStore()).monthlyLimit, isNull);
+
+    await store.setMonthlyLimit(500);
+    await store.setMonthlyLimit(0);
+    expect(store.monthlyLimit, isNull);
+    expect((await loadStore()).monthlyLimit, isNull);
+  });
+
   test('categorySummariesForMonth sums installment values per category',
       () async {
     final store = await loadStore();

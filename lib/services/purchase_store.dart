@@ -11,13 +11,17 @@ import '../models/purchase.dart';
 class PurchaseStore extends ChangeNotifier {
   static const _purchasesKey = 'purchases_v1';
   static const _categoriesKey = 'categories_v1';
+  static const _monthlyLimitKey = 'monthly_limit_v1';
 
   List<Purchase> _purchases = [];
   List<Category> _categories = [];
+  double? _monthlyLimit;
   bool _isLoaded = false;
 
   List<Purchase> get purchases => List.unmodifiable(_purchases);
   List<Category> get categories => List.unmodifiable(_categories);
+  double? get monthlyLimit => _monthlyLimit;
+  bool get hasMonthlyLimit => _monthlyLimit != null && _monthlyLimit! > 0;
   bool get isLoaded => _isLoaded;
 
   Future<void> load() async {
@@ -43,6 +47,9 @@ class PurchaseStore extends ChangeNotifier {
       await _persistCategories();
     }
 
+    final rawLimit = prefs.getDouble(_monthlyLimitKey);
+    _monthlyLimit = (rawLimit != null && rawLimit > 0) ? rawLimit : null;
+
     _isLoaded = true;
     notifyListeners();
   }
@@ -62,6 +69,23 @@ class PurchaseStore extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final encoded = jsonEncode(_categories.map((c) => c.toJson()).toList());
     await prefs.setString(_categoriesKey, encoded);
+  }
+
+  Future<void> _persistMonthlyLimit() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_monthlyLimit == null) {
+      await prefs.remove(_monthlyLimitKey);
+    } else {
+      await prefs.setDouble(_monthlyLimitKey, _monthlyLimit!);
+    }
+  }
+
+  Future<void> setMonthlyLimit(double? value) async {
+    final normalized = (value != null && value > 0) ? value : null;
+    if (normalized == _monthlyLimit) return;
+    _monthlyLimit = normalized;
+    notifyListeners();
+    await _persistMonthlyLimit();
   }
 
   void _sortPurchases() {
