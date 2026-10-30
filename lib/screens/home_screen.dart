@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'settings_screen.dart';
+import 'chart_screen.dart';
 import '../services/purchase_store.dart';
 import '../utils/currency_formatter.dart';
 import '../widgets/add_purchase_sheet.dart';
@@ -66,7 +67,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     onChanged: (m) => setState(() => _selectedMonth = m),
                   ),
                   const SizedBox(height: 12),
-                  _TotalCard(total: total, monthlyLimit: store.monthlyLimit),
+                  _TotalCard(
+                    total: total,
+                    monthlyLimit: store.monthlyLimit,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            ChartScreen(initialMonth: _selectedMonth),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   CategorySummaryRow(summaries: categorySummaries),
                   Padding(
@@ -137,10 +147,15 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _TotalCard extends StatelessWidget {
-  const _TotalCard({required this.total, this.monthlyLimit});
+  const _TotalCard({
+    required this.total,
+    this.monthlyLimit,
+    required this.onTap,
+  });
 
   final double total;
   final double? monthlyLimit;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -152,63 +167,74 @@ class _TotalCard extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              theme.colorScheme.primary,
-              theme.colorScheme.primary.withValues(alpha: 0.82),
-            ],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Material(
+          color: Colors.transparent,
+          child: Ink(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  theme.colorScheme.primary,
+                  theme.colorScheme.primary.withValues(alpha: 0.82),
+                ],
+              ),
+            ),
+            child: InkWell(
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Total gasto no mês',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onPrimary
+                            .withValues(alpha: 0.85),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      formatBRL(total),
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        color: theme.colorScheme.onPrimary,
+                        fontWeight: FontWeight.w800,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    if (hasLimit) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'de ${formatBRL(monthlyLimit!)}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onPrimary
+                              .withValues(alpha: 0.85),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: ratio,
+                          minHeight: 4,
+                          backgroundColor: theme.colorScheme.onPrimary
+                              .withValues(alpha: 0.18),
+                          valueColor: AlwaysStoppedAnimation(
+                            isOverLimit
+                                ? theme.colorScheme.error
+                                : theme.colorScheme.onPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           ),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Total gasto no mês',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onPrimary.withValues(alpha: 0.85),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              formatBRL(total),
-              style: theme.textTheme.headlineMedium?.copyWith(
-                color: theme.colorScheme.onPrimary,
-                fontWeight: FontWeight.w800,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-            if (hasLimit) ...[
-              const SizedBox(height: 4),
-              Text(
-                'de ${formatBRL(monthlyLimit!)}',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onPrimary.withValues(alpha: 0.85),
-                ),
-              ),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: ratio,
-                  minHeight: 4,
-                  backgroundColor:
-                      theme.colorScheme.onPrimary.withValues(alpha: 0.18),
-                  valueColor: AlwaysStoppedAnimation(
-                    isOverLimit
-                        ? theme.colorScheme.error
-                        : theme.colorScheme.onPrimary,
-                  ),
-                ),
-              ),
-            ],
-          ],
         ),
       ),
     );
