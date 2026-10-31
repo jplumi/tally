@@ -20,6 +20,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late DateTime _selectedMonth;
+  String? _selectedCategoryId;
 
   @override
   void initState() {
@@ -37,9 +38,17 @@ class _HomeScreenState extends State<HomeScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final monthPurchases = store.purchasesForMonth(_selectedMonth);
+    final allMonthPurchases = store.purchasesForMonth(_selectedMonth);
+    final monthPurchases = _selectedCategoryId == null
+        ? allMonthPurchases
+        : allMonthPurchases
+            .where((p) => p.categoryId == _selectedCategoryId)
+            .toList();
     final total = store.totalForMonth(_selectedMonth);
     final categorySummaries = store.categorySummariesForMonth(_selectedMonth);
+    final selectedCategory = _selectedCategoryId == null
+        ? null
+        : store.categoryById(_selectedCategoryId!);
 
     return Scaffold(
       appBar: AppBar(
@@ -78,7 +87,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  CategorySummaryRow(summaries: categorySummaries),
+                  CategorySummaryRow(
+                    summaries: categorySummaries,
+                    selectedCategoryId: _selectedCategoryId,
+                    onCategoryTap: (summary) {
+                      setState(() {
+                        _selectedCategoryId =
+                            _selectedCategoryId == summary.category.id
+                                ? null
+                                : summary.category.id;
+                      });
+                    },
+                  ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
                     child: Row(
