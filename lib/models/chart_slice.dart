@@ -10,11 +10,13 @@ class ChartSlice {
     required this.label,
     required this.value,
     required this.color,
+    this.icon,
   });
 
   final String label;
   final double value;
   final Color color;
+  final IconData? icon;
 }
 
 class ChartData {
@@ -43,6 +45,7 @@ ChartData buildChartData({
           label: summary.category.name,
           value: summary.spent,
           color: summary.category.color,
+          icon: summary.category.icon,
         ),
       )
       .toList();

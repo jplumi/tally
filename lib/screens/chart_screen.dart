@@ -73,19 +73,7 @@ class _ChartScreenState extends State<ChartScreen> {
               EmptyState(onAddPressed: () => AddPurchaseSheet.show(context))
             else ...[
               Center(
-                child: PieChart(
-                  data: data,
-                  nameStyle: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ) ??
-                      const TextStyle(),
-                  percentStyle: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ) ??
-                      const TextStyle(),
-                  lineColor:
-                      theme.colorScheme.outlineVariant.withValues(alpha: 0.8),
-                ),
+                child: PieChart(data: data),
               ),
               const SizedBox(height: 24),
               _Legend(data: data),
@@ -113,14 +101,17 @@ class _Legend extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Row(
               children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: slice.color,
-                    shape: BoxShape.circle,
+                if (slice.icon != null)
+                  Icon(slice.icon, size: 16, color: slice.color)
+                else
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: slice.color,
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
